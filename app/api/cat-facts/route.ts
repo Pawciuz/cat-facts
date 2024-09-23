@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { from, interval, map, startWith, switchMap } from "rxjs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+// Typy dla danych
 type CatFact = {
   fact: string;
 };
@@ -39,40 +39,43 @@ async function fetchRandomUsers(): Promise<RandomUser[]> {
   }
 }
 
-const factWithUser$ = interval(10000).pipe(
-  startWith(0),
-  switchMap(() =>
-    from(Promise.all([fetchCatFacts(), fetchRandomUsers()])).pipe(
-      map(([facts, users]) =>
-        facts.map((fact, index) => ({
-          user: users[index]?.name || "",
-          fact: fact.fact,
-        })),
-      ),
-    ),
-  ),
-);
+async function* generateFactsWithUsers(): AsyncGenerator<
+  FactWithUser[],
+  void,
+  unknown
+> {
+  while (true) {
+    const facts = await fetchCatFacts();
+    const users = await fetchRandomUsers();
+    const combined = facts.map((fact, index) => ({
+      user: users[index]?.name || "",
+      fact: fact.fact,
+    }));
+    yield combined;
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // Czekaj 10 sekund
+  }
+}
 
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder();
-
   const stream = new ReadableStream({
-    start(controller) {
-      const subscription = factWithUser$.subscribe({
-        next: (factsWithUsers) => {
+    async start(controller) {
+      const generator = generateFactsWithUsers();
+
+      const reader = async () => {
+        for await (const factsWithUsers of generator) {
+          if (request.signal.aborted) {
+            controller.close();
+            return;
+          }
           const data = `data: ${JSON.stringify(factsWithUsers)}\n\n`;
           controller.enqueue(encoder.encode(data));
-        },
-        error: (err) => {
-          console.error(err);
-          controller.error(err);
-        },
-        complete: () => {
-          controller.close();
-        },
-      });
-      request.signal.addEventListener("abort", () => {
-        subscription.unsubscribe();
+        }
+      };
+
+      reader().catch((err) => {
+        console.error(err);
+        controller.error(err);
       });
     },
   });
