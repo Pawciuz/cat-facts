@@ -1,5 +1,5 @@
 import { CatFacts } from "@/components/CatFacts";
-import { CardSkeleton } from "@/components/ui/Skeleton/CardSkeleton";
+import { CardSkeleton } from "@/components/ui";
 import { Suspense } from "react";
 
 const Home = async () => {
