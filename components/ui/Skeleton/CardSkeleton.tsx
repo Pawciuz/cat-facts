@@ -1,8 +1,6 @@
-// Upewnij się, że masz odpowiedni komponent Skeleton
-
 import { Skeleton } from "./skeleton";
 
-export function CardSkeleton() {
+const CardSkeleton = () => {
   return (
     <>
       <p className="text-center ">Loading ...</p>
@@ -13,4 +11,5 @@ export function CardSkeleton() {
       </div>
     </>
   );
-}
+};
+export { CardSkeleton };

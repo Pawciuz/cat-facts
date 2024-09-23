@@ -11,7 +11,6 @@ export const createSSEObservable = (): Observable<FactWithUser[]> => {
     };
 
     eventSource.onerror = () => {
-      console.error("Error in EventSource.");
       eventSource.close();
     };
 
