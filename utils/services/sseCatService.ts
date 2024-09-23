@@ -7,7 +7,6 @@ export const createSSEObservable = (): Observable<FactWithUser[]> => {
 
     eventSource.onmessage = (event) => {
       const newFact = JSON.parse(event.data);
-      console.log("Received event:", newFact);
       subscriber.next(newFact);
     };
 

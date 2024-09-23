@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { interval, mergeMap, startWith } from "rxjs";
-// Typy dla danych
+import { from, interval, map, startWith, switchMap } from "rxjs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 type CatFact = {
   fact: string;
 };
@@ -14,55 +15,53 @@ export type FactWithUser = {
   fact: string;
 };
 
-async function fetchCatFact(): Promise<CatFact> {
+async function fetchCatFacts(): Promise<CatFact[]> {
   try {
-    const response = await fetch("https://cat-fact.herokuapp.com/facts/random");
+    const response = await fetch(
+      "https://cat-fact.herokuapp.com/facts/random?amount=6",
+    );
     const data = await response.json();
-    console.log(response);
-    const fact = `${data.text}`;
-    return { fact };
+    return data.map((item: { text: string }) => ({ fact: item.text }));
   } catch {
-    return { fact: "" };
+    return Array(6).fill({ fact: "" });
   }
 }
 
-async function fetchRandomUser(): Promise<RandomUser> {
+async function fetchRandomUsers(): Promise<RandomUser[]> {
   try {
-    const response = await fetch("https://randomuser.me/api/");
+    const response = await fetch("https://randomuser.me/api/?results=6");
     const data = await response.json();
-    const name = data?.results?.[0]?.login?.username ?? "";
-    return { name };
+    return data.results.map((user: { login: { username: string } }) => ({
+      name: user.login.username,
+    }));
   } catch {
-    return { name: "" };
+    return Array(6).fill({ name: "" });
   }
 }
 
 const factWithUser$ = interval(10000).pipe(
   startWith(0),
-  mergeMap(async () => {
-    const factsPromises = Array.from({ length: 6 }).map(() => fetchCatFact());
-    const usersPromises = Array.from({ length: 6 }).map(() =>
-      fetchRandomUser(),
-    );
-
-    const facts = await Promise.all(factsPromises);
-    const users = await Promise.all(usersPromises);
-
-    const combined = facts.map((fact, index) => ({
-      user: users[index]?.name || "",
-      fact: fact.fact,
-    }));
-
-    return combined;
-  }),
+  switchMap(() =>
+    from(Promise.all([fetchCatFacts(), fetchRandomUsers()])).pipe(
+      map(([facts, users]) =>
+        facts.map((fact, index) => ({
+          user: users[index]?.name || "",
+          fact: fact.fact,
+        })),
+      ),
+    ),
+  ),
 );
 
 export async function GET(request: NextRequest) {
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     start(controller) {
       const subscription = factWithUser$.subscribe({
         next: (factsWithUsers) => {
-          controller.enqueue(`data: ${JSON.stringify(factsWithUsers)}\n\n`);
+          const data = `data: ${JSON.stringify(factsWithUsers)}\n\n`;
+          controller.enqueue(encoder.encode(data));
         },
         error: (err) => {
           console.error(err);
@@ -72,7 +71,6 @@ export async function GET(request: NextRequest) {
           controller.close();
         },
       });
-
       request.signal.addEventListener("abort", () => {
         subscription.unsubscribe();
       });

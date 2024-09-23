@@ -1,9 +1,9 @@
 import CatFacts from "@/components/CatFacts";
-
-export default function Home() {
+const Home = () => {
   return (
     <div>
       <CatFacts />
     </div>
   );
-}
+};
+export default Home;
