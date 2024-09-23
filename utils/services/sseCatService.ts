@@ -1,9 +1,9 @@
-import { FactWithUser } from "@/app/api/cat-facts/route";
 import { Observable } from "rxjs";
+import { FactWithUser } from "@/utils/api";
 
 export const createSSEObservable = (): Observable<FactWithUser[]> => {
   return new Observable((subscriber) => {
-    const eventSource = new EventSource("/api/cat-facts");
+    const eventSource = new EventSource("/api/get/cat-facts");
 
     eventSource.onmessage = (event) => {
       const newFact = JSON.parse(event.data);
