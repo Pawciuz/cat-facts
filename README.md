@@ -1,4 +1,4 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a fullstack [Next.js](https://nextjs.org) project which uses SSE to stream random cat facts and users info.
 
 ## Getting Started
 
